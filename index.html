@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cortes verticais</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>✂️</text></svg>">
+<style>
+:root{
+  --bg:#101216;--panel:#161920;--line:#262a33;--ink:#e9eaee;--muted:#8d92a0;
+  --accent:#9db2ff;--accent-ink:#0e1220;--danger:#ff8f8f;
+  --font:"Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-text-size-adjust:100%}
+body{min-height:100vh;padding:max(28px,env(safe-area-inset-top)) 20px max(40px,env(safe-area-inset-bottom))}
+main{max-width:760px;margin:0 auto}
+h1{font-weight:300;font-size:clamp(2rem,7vw,3.2rem);line-height:1.08;letter-spacing:-.025em;max-width:14em}
+.lead{color:var(--muted);margin-top:14px;max-width:34em;line-height:1.55}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* faixa de cortes: o elemento central da página */
+.strip{display:flex;gap:3px;height:44px;margin:34px 0 8px;align-items:stretch}
+.strip i{display:block;background:var(--line);border-radius:3px;min-width:2px;transition:background .25s}
+.strip i.run{background:#46507a}
+.strip i.done{background:var(--accent)}
+.strip-info{color:var(--muted);font-size:.9rem;min-height:1.3em}
+
+.drop{display:block;margin-top:30px;border:1px dashed #3a3f4b;border-radius:14px;padding:38px 20px;text-align:center;cursor:pointer;background:var(--panel);transition:border-color .2s,background .2s}
+.drop:hover,.drop.over{border-color:var(--accent);background:#191d27}
+.drop strong{font-weight:500;font-size:1.05rem;display:block}
+.drop span{color:var(--muted);font-size:.9rem;display:block;margin-top:6px}
+.drop input{position:absolute;opacity:0;pointer-events:none}
+
+.panel{margin-top:30px;border-top:1px solid var(--line);padding-top:26px}
+.file{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline}
+.file b{font-weight:500;word-break:break-all}
+.file small{color:var(--muted)}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:22px;margin-top:22px}
+fieldset{border:0;padding:0;min-width:0}
+legend{color:var(--muted);font-size:.9rem;margin-bottom:9px;padding:0}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg label{flex:1}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;text-align:center;padding:10px 6px;font-size:.92rem;cursor:pointer;color:var(--muted);transition:background .15s,color .15s}
+.seg input:checked+span{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:-2px}
+.seg label+label span{border-left:1px solid var(--line)}
+.seg input:checked+span{border-left-color:transparent}
+
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px;align-items:center}
+button{font:inherit;cursor:pointer;border-radius:10px;padding:13px 22px;border:1px solid var(--line);background:transparent;color:var(--ink)}
+button.main{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:hover:not(:disabled){filter:brightness(1.1)}
+.note{color:var(--muted);font-size:.88rem;line-height:1.5;margin-top:14px;max-width:40em}
+.err{color:var(--danger)}
+
+.prog{margin-top:26px}
+.bar{height:6px;background:var(--line);border-radius:6px;overflow:hidden}
+.bar div{height:100%;width:0;background:var(--accent);transition:width .2s}
+.prog p{margin-top:10px;color:var(--muted);font-size:.92rem}
+
+.results{margin-top:36px}
+.results h2{font-weight:400;font-size:1.3rem;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px;margin-top:18px}
+.clip{display:flex;flex-direction:column;gap:9px}
+.clip video{width:100%;aspect-ratio:9/16;background:#000;border-radius:12px;object-fit:cover}
+.clip a{color:var(--ink);text-decoration:none;font-size:.92rem;display:flex;justify-content:space-between;border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+.clip a:hover{border-color:var(--accent);color:var(--accent)}
+.clip span{color:var(--muted)}
+footer{margin-top:56px;color:var(--muted);font-size:.85rem;line-height:1.55;max-width:40em}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Um vídeo longo vira vários cortes verticais.</h1>
+  <p class="lead">Envie um vídeo do seu aparelho. O site divide em partes iguais, no formato 9:16 para Shorts e Reels, sem enviar nada para a internet.</p>
+
+  <div class="strip" id="strip" aria-hidden="true"></div>
+  <div class="strip-info" id="stripInfo">Exemplo de divisão. Envie um vídeo para ver os seus cortes.</div>
+
+  <label class="drop" id="drop">
+    <input type="file" id="file" accept="video/*">
+    <strong>Escolher vídeo</strong>
+    <span>ou arraste o arquivo para cá</span>
+  </label>
+
+  <section class="panel" id="panel" hidden>
+    <div class="file"><b id="fname"></b><small id="fmeta"></small></div>
+
+    <div class="opts">
+      <fieldset>
+        <legend>Duração de cada corte</legend>
+        <div class="seg" id="optLen">
+          <label><input type="radio" name="len" value="30"><span>30 s</span></label>
+          <label><input type="radio" name="len" value="60" checked><span>60 s</span></label>
+          <label><input type="radio" name="len" value="90"><span>90 s</span></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Encaixe no 9:16</legend>
+        <div class="seg" id="optFit">
+          <label><input type="radio" name="fit" value="blur" checked><span>Fundo desfocado</span></label>
+          <label><input type="radio" name="fit" value="crop"><span>Cortar o centro</span></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Qualidade</legend>
+        <div class="seg" id="optQ">
+          <label><input type="radio" name="q" value="540" checked><span>Rápida (540p)</span></label>
+          <label><input type="radio" name="q" value="720"><span>HD (720p)</span></label>
+        </div>
+      </fieldset>
+    </div>
+
+    <div class="actions">
+      <button class="main" id="go">Gerar cortes</button>
+      <button id="stop" hidden>Parar</button>
+    </div>
+    <p class="note" id="note">O processamento acontece no seu aparelho e leva tempo: com a opção rápida, conte alguns minutos por corte. Deixe esta aba aberta e a tela ligada.</p>
+
+    <div class="prog" id="prog" hidden>
+      <div class="bar"><div id="barIn"></div></div>
+      <p id="progTxt"></p>
+    </div>
+  </section>
+
+  <section class="results" id="results" hidden>
+    <h2><span id="resTitle">Cortes prontos</span><button id="all">Baixar todos</button></h2>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <footer>Use apenas vídeos seus ou que você tenha permissão para editar e publicar. Seus arquivos não saem do navegador e nenhuma conta ou chave é necessária.</footer>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const strip=$('strip'),stripInfo=$('stripInfo'),drop=$('drop'),fileIn=$('file'),panel=$('panel');
+const go=$('go'),stop=$('stop'),prog=$('prog'),barIn=$('barIn'),progTxt=$('progTxt');
+const results=$('results'),grid=$('grid');
+const val=n=>document.querySelector('input[name="'+n+'"]:checked').value;
+
+let file=null,duration=0,ff=null,loaded=false,cancelled=false,running=false,clips=[];
+const MIN_TAIL=5;
+
+const fmt=s=>{s=Math.round(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),r=s%60;
+  return (h?h+'h ':'')+(m||h?m+'min ':'')+(h?'':r+'s');};
+const mb=b=>b>1e9?(b/1e9).toFixed(1)+' GB':Math.round(b/1e6)+' MB';
+
+function plan(){
+  const len=+val('len'),list=[];
+  for(let t=0;t<duration;t+=len){
+    const l=Math.min(len,duration-t);
+    if(l>=MIN_TAIL||list.length===0)list.push({start:t,len:l});
+  }
+  return list;
+}
+function drawStrip(list,total){
+  strip.innerHTML='';
+  list.forEach(c=>{const i=document.createElement('i');i.style.flex=c.len+' 0 0';strip.appendChild(i)});
+}
+function refresh(){
+  if(!file)return;
+  const list=plan();
+  drawStrip(list);
+  stripInfo.textContent=list.length+(list.length===1?' corte':' cortes')+' de até '+val('len')+' segundos';
+  go.textContent='Gerar '+list.length+(list.length===1?' corte':' cortes');
+}
+// faixa de exemplo antes do envio
+(function demo(){
+  [5,5,5,5,5,5,5,5,5,5,5,3].forEach(n=>{const i=document.createElement('i');i.style.flex=n+' 0 0';strip.appendChild(i)});
+})();
+
+function accept(f,d){
+  file=f;duration=d;
+  $('fname').textContent=f.name;
+  $('fmeta').textContent=fmt(d)+' · '+mb(f.size);
+  panel.hidden=false;results.hidden=true;grid.innerHTML='';clips=[];
+  refresh();
+}
+async function durationViaFF(f){
+  stripInfo.textContent='Lendo o vídeo com o editor interno… (na primeira vez baixa cerca de 30 MB)';
+  await loadFF();
+  let d=0;
+  const h=({message})=>{const m=message.match(/Duration: (\d+):(\d+):(\d+(?:\.\d+)?)/);if(m)d=+m[1]*3600+ +m[2]*60+ +m[3]};
+  ff.on('log',h);
+  await ff.createDir('/in').catch(()=>{});
+  await ff.mount('WORKERFS',{files:[new File([f],'entrada')]},'/in');
+  try{await ff.exec(['-hide_banner','-i','/in/entrada'])}catch(e){}
+  ff.off('log',h);
+  await ff.unmount('/in').catch(()=>{});
+  return d;
+}
+async function fallback(f){
+  try{
+    const d=await durationViaFF(f);
+    if(d>=1)return accept(f,d);
+    fail('Não consegui ler este vídeo. Tente converter para MP4.');
+  }catch(e){console.error(e);loaded=false;fail('Não consegui ler este vídeo. Tente outro arquivo MP4 ou MOV.')}
+}
+function setFile(f){
+  if(!f||running)return;
+  const url=URL.createObjectURL(f),v=document.createElement('video');
+  v.preload='metadata';
+  v.onloadedmetadata=()=>{
+    const d=v.duration;URL.revokeObjectURL(url);
+    if(isFinite(d)&&d>=1)accept(f,d);else fallback(f);
+  };
+  v.onerror=()=>{URL.revokeObjectURL(url);fallback(f)};
+  v.src=url;
+}
+function fail(msg){stripInfo.textContent=msg;stripInfo.classList.add('err');setTimeout(()=>stripInfo.classList.remove('err'),8000)}
+
+fileIn.onchange=()=>setFile(fileIn.files[0]);
+['dragover','dragenter'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',ev=>setFile(ev.dataTransfer.files[0]));
+document.querySelectorAll('#optLen input').forEach(i=>i.onchange=refresh);
+
+async function loadFF(){
+  if(loaded)return;
+  progTxt.textContent='Preparando o editor de vídeo (primeira vez baixa cerca de 30 MB)…';
+  const B='https://cdn.jsdelivr.net/npm/',{toBlobURL}=FFmpegUtil;
+  ff=new FFmpegWASM.FFmpeg();
+  ff.on('progress',({progress})=>{
+    if(!running)return;
+    const p=Math.max(0,Math.min(1,progress||0));
+    barIn.style.width=((cur+p)/total*100)+'%';
+  });
+  await ff.load({
+    classWorkerURL:await toBlobURL(B+'@ffmpeg/ffmpeg@0.12.10/dist/umd/814.ffmpeg.js','text/javascript'),
+    coreURL:await toBlobURL(B+'@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js','text/javascript'),
+    wasmURL:await toBlobURL(B+'@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm','application/wasm')
+  });
+  loaded=true;
+}
+
+function filter(W,H,fit){
+  if(fit==='crop')return '[0:v]scale='+W+':'+H+':force_original_aspect_ratio=increase,crop='+W+':'+H+',setsar=1[v]';
+  const w=W/8,h=H/8;
+  return '[0:v]split[a][b];[a]scale='+w+':'+h+':force_original_aspect_ratio=increase,crop='+w+':'+h+',scale='+W+':'+H+',boxblur=5:1[bg];'+
+    '[b]scale='+W+':'+H+':force_original_aspect_ratio=decrease:force_divisible_by=2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[v]';
+}
+
+let cur=0,total=1;
+go.onclick=async()=>{
+  if(!file||running)return;
+  running=true;cancelled=false;clips.forEach(c=>URL.revokeObjectURL(c.url));clips=[];grid.innerHTML='';results.hidden=true;
+  go.disabled=true;stop.hidden=false;prog.hidden=false;barIn.style.width='0';
+  const list=plan(),q=val('q'),fit=val('fit');
+  const H=q==='720'?1280:960,W=q==='720'?720:540;
+  total=list.length;
+  const bars=[...strip.children];bars.forEach(b=>b.className='');
+  try{
+    await loadFF();
+    await ff.createDir('/in').catch(()=>{});
+    await ff.mount('WORKERFS',{files:[new File([file],'entrada')]},'/in');
+    for(cur=0;cur<list.length;cur++){
+      if(cancelled)break;
+      const c=list[cur];
+      bars[cur].className='run';
+      progTxt.textContent='Gerando corte '+(cur+1)+' de '+total+'…';
+      const code=await ff.exec(['-ss',String(c.start),'-t',String(c.len),'-i','/in/entrada',
+        '-filter_complex',filter(W,H,fit),'-map','[v]','-map','0:a?',
+        '-c:v','libx264','-preset','ultrafast','-crf','28','-pix_fmt','yuv420p',
+        '-c:a','aac','-b:a','128k','-movflags','+faststart','-y','out.mp4']);
+      if(cancelled)break;
+      if(code!==0)throw new Error('ffmpeg '+code);
+      const data=await ff.readFile('out.mp4');
+      await ff.deleteFile('out.mp4');
+      const blob=new Blob([data.buffer],{type:'video/mp4'});
+      addClip(blob,cur+1);
+      bars[cur].className='done';
+    }
+    await ff.unmount('/in').catch(()=>{});
+    progTxt.textContent=cancelled?'Processo interrompido.':'Pronto. Seus cortes estão logo abaixo.';
+    if(!cancelled)barIn.style.width='100%';
+  }catch(e){
+    console.error(e);
+    progTxt.textContent='Algo deu errado (provavelmente pouca memória). Tente a qualidade rápida ou um vídeo menor.';
+    loaded=false;
+  }finally{
+    running=false;go.disabled=false;stop.hidden=true;
+  }
+};
+stop.onclick=()=>{cancelled=true;try{ff.terminate()}catch(e){}loaded=false;progTxt.textContent='Parando…'};
+
+function addClip(blob,n){
+  const url=URL.createObjectURL(blob),name='corte-'+String(n).padStart(2,'0')+'.mp4';
+  clips.push({url,name});
+  const d=document.createElement('div');d.className='clip';
+  d.innerHTML='<video controls playsinline preload="metadata"></video><a download><b>Baixar</b><span></span></a>';
+  d.querySelector('video').src=url;
+  const a=d.querySelector('a');a.href=url;a.download=name;
+  a.querySelector('span').textContent=name.replace('.mp4','')+' · '+mb(blob.size);
+  grid.appendChild(d);results.hidden=false;
+  $('resTitle').textContent=clips.length+(clips.length===1?' corte pronto':' cortes prontos');
+}
+$('all').onclick=async()=>{
+  for(const c of clips){const a=document.createElement('a');a.href=c.url;a.download=c.name;document.body.appendChild(a);a.click();a.remove();await new Promise(r=>setTimeout(r,500))}
+};
+})();
+</script>
+</body>
+</html>
